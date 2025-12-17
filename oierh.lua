@@ -7,6 +7,43 @@ local Workspace = game:GetService("Workspace")
 local VirtualInputManager = game:GetService("VirtualInputManager")
 local player = Players.LocalPlayer
 local character = player.CharacterAdded:Wait()
+
+local API_NAMES = {
+    Equip = "zUVTk/umsejYg",
+    Unequip = "PASTE_HERE",
+    Spawn = "PASTE_HERE",
+    BuyItem = "PASTE_HERE",
+    UnsubscribeFromHouse = "PASTE_HERE",
+    CreatePetObject = "PASTE_HERE",
+    RevealMysteryAilment = "PASTE_HERE",
+    CombinePets = "PASTE_HERE",
+    SetDoorLocked = "PASTE_HERE",
+    SendTradeRequest = "PASTE_HERE",
+    AddItemToOffer = "PASTE_HERE",
+    AcceptOrDeclineTrade = "PASTE_HERE",
+    AcceptNegotiation = "PASTE_HERE",
+    ConfirmTrade = "PASTE_HERE",
+    ServerUseTool = "PASTE_HERE",
+    FocusPet = "PASTE_HERE",
+    UnfocusPet = "PASTE_HERE",
+    InteractWithFurniture = "PASTE_HERE",
+    DeleteItem = "PASTE_HERE",
+    AddPet = "PASTE_HERE",
+    RemovePet = "PASTE_HERE",
+    CommitAllProgression = "PASTE_HERE",
+}
+
+local function getAPI(name)
+    local api = ReplicatedStorage:FindFirstChild("API")
+    if api then
+        local remote = api:FindFirstChild(API_NAMES[name])
+        if remote then
+            return remote
+        end
+    end
+    return nil
+end
+
 local DEBUG_MODE = true
 local PetFarmMode = false
 local petFarmCoroutine = nil
@@ -74,7 +111,8 @@ local function sendTradeRequest(targetPlayerName)
   
     debugPrint("Sending trade request to: " .. targetPlayerName)
     local success, err = pcall(function()
-        ReplicatedStorage:WaitForChild("API"):WaitForChild("TradeAPI/SendTradeRequest"):FireServer(targetPlayer)
+        local tradeAPI = getAPI("SendTradeRequest")
+        if tradeAPI then tradeAPI:FireServer(targetPlayer) end
     end)
   
     if success then
@@ -134,7 +172,8 @@ local function addAllPetsToTrade()
     for i = 1, maxPets do
         local petID = petIDs[i]
         local success, err = pcall(function()
-            ReplicatedStorage:WaitForChild("API"):WaitForChild("TradeAPI/AddItemToOffer"):FireServer(petID)
+            local addAPI = getAPI("AddItemToOffer")
+            if addAPI then addAPI:FireServer(petID) end
         end)
       
         if success then
@@ -150,7 +189,9 @@ end
 local function completeTradeProcess(targetPlayer)
     local args = { targetPlayer, true }
     local success1, result1 = pcall(function()
-        return ReplicatedStorage:WaitForChild("API"):WaitForChild("TradeAPI/AcceptOrDeclineTradeRequest"):InvokeServer(unpack(args))
+        local acceptAPI = getAPI("AcceptOrDeclineTrade")
+        if not acceptAPI then return false end
+        return acceptAPI:InvokeServer(unpack(args))
     end)
   
     if success1 then
@@ -160,14 +201,16 @@ local function completeTradeProcess(targetPlayer)
         task.wait(3)
       
         local success2, result2 = pcall(function()
-            ReplicatedStorage:WaitForChild("API"):WaitForChild("TradeAPI/AcceptNegotiation"):FireServer()
+            local negAPI = getAPI("AcceptNegotiation")
+            if negAPI then negAPI:FireServer() end
         end)
       
         if success2 then
             task.wait(9)
           
             local success3, result3 = pcall(function()
-                ReplicatedStorage:WaitForChild("API"):WaitForChild("TradeAPI/ConfirmTrade"):FireServer()
+                local confirmAPI = getAPI("ConfirmTrade")
+                if confirmAPI then confirmAPI:FireServer() end
             end)
           
             if success3 then
@@ -213,7 +256,9 @@ local function safelyUnequipFood(foodID)
         debugPrint("Unequipping food: " .. foodID)
         local args = { foodID }
         local success, result = pcall(function()
-            return ReplicatedStorage:WaitForChild("API"):WaitForChild("ToolAPI/Unequip"):InvokeServer(unpack(args))
+            local unequipAPI = getAPI("Unequip")
+            if not unequipAPI then return false end
+            return unequipAPI:InvokeServer(unpack(args))
         end)
         if success then
             debugPrint("Successfully unequipped food")
@@ -254,7 +299,9 @@ local function safelyUnequipToy()
         debugPrint("Unequipping toy: " .. currentToyID)
         local args = { currentToyID }
         local success, result = pcall(function()
-            return ReplicatedStorage:WaitForChild("API"):WaitForChild("ToolAPI/Unequip"):InvokeServer(unpack(args))
+            local unequipAPI = getAPI("Unequip")
+            if not unequipAPI then return false end
+            return unequipAPI:InvokeServer(unpack(args))
         end)
      
         if success then
@@ -280,7 +327,9 @@ local function performThrowToy()
     currentToyID = toyID
  
     local success1, err1 = pcall(function()
-        return ReplicatedStorage.API["ToolAPI/Equip"]:InvokeServer(toyID, {
+        local equipAPI = getAPI("Equip")
+        if not equipAPI then return false end
+        return equipAPI:InvokeServer(toyID, {
             use_sound_delay = true,
             equip_as_last = false
         })
@@ -295,7 +344,9 @@ local function performThrowToy()
     task.wait(1.2)
  
     local success2, err2 = pcall(function()
-        return ReplicatedStorage.API["ToolAPI/ServerUseTool"]:FireServer(toyID, "START")
+        local useAPI = getAPI("ServerUseTool")
+        if not useAPI then return false end
+        return useAPI:FireServer(toyID, "START")
     end)
  
     if not success2 then
@@ -307,7 +358,9 @@ local function performThrowToy()
     task.wait(1)
  
     local success3, err3 = pcall(function()
-        return ReplicatedStorage.API["PetObjectAPI/CreatePetObject"]:InvokeServer(
+        local createAPI = getAPI("CreatePetObject")
+        if not createAPI then return false end
+        return createAPI:InvokeServer(
             "__Enum_PetObjectCreatorType_1",
             { reaction_name = "ThrowToyReaction", unique_id = toyID }
         )
@@ -322,7 +375,9 @@ local function performThrowToy()
     task.wait(1.1)
  
     local success4, err4 = pcall(function()
-        return ReplicatedStorage.API["ToolAPI/ServerUseTool"]:FireServer(toyID, "END")
+        local useAPI = getAPI("ServerUseTool")
+        if not useAPI then return false end
+        return useAPI:FireServer(toyID, "END")
     end)
  
     if not success4 then
@@ -410,7 +465,9 @@ end
 local function resolveMysteryAilment(petUniqueID)
     debugPrint("Resolving mystery ailment for pet: " .. tostring(petUniqueID))
     local success, result = pcall(function()
-        return ReplicatedStorage:WaitForChild("API"):WaitForChild("AilmentsAPI/RevealMysteryAilment"):InvokeServer(petUniqueID)
+        local revealAPI = getAPI("RevealMysteryAilment")
+        if not revealAPI then return false end
+        return revealAPI:InvokeServer(petUniqueID)
     end)
     if success then
         debugPrint("Mystery ailment revealed successfully")
@@ -466,7 +523,8 @@ local function focusPet(petModel)
     if not petModel then return false end
     local args = { petModel }
     local success, err = pcall(function()
-        ReplicatedStorage:WaitForChild("API"):WaitForChild("AdoptAPI/FocusPet"):FireServer(unpack(args))
+        local focusAPI = getAPI("FocusPet")
+        if focusAPI then focusAPI:FireServer(unpack(args)) end
     end)
     if success then
         debugPrint("Successfully focused on pet: " .. petModel.Name)
@@ -480,7 +538,8 @@ local function unfocusPet(petModel)
     if not petModel then return false end
     local args = { petModel }
     local success, err = pcall(function()
-        ReplicatedStorage:WaitForChild("API"):WaitForChild("AdoptAPI/UnfocusPet"):FireServer(unpack(args))
+        local unfocusAPI = getAPI("UnfocusPet")
+        if unfocusAPI then unfocusAPI:FireServer(unpack(args)) end
     end)
     if success then
         debugPrint("Successfully unfocused pet: " .. petModel.Name)
@@ -553,7 +612,8 @@ local function handlePetMeAilment(petUniqueID)
     if not unfocusPet(petModel) then
         local args = { Workspace:WaitForChild("Pets"):WaitForChild(petModel.Name) }
         local success, err = pcall(function()
-            ReplicatedStorage:WaitForChild("API"):WaitForChild("AdoptAPI/UnfocusPet"):FireServer(unpack(args))
+            local unfocusAPI = getAPI("UnfocusPet")
+        if unfocusAPI then unfocusAPI:FireServer(unpack(args)) end
         end)
         if success then
             debugPrint("Successfully unfocused pet using alternative method")
@@ -672,7 +732,9 @@ local function ensurePetEquipped(petUniqueID, timeout)
     end
     debugPrint("Pet not equipped, equipping: " .. tostring(petUniqueID))
     local success, result = pcall(function()
-        return ReplicatedStorage.API["ToolAPI/Equip"]:InvokeServer(petUniqueID, {use_sound_delay = true, equip_as_last = false})
+        local equipAPI = getAPI("Equip")
+        if not equipAPI then return false end
+        return equipAPI:InvokeServer(petUniqueID, {use_sound_delay = true, equip_as_last = false})
     end)
     if not success then
         debugPrint("Failed to equip pet: " .. tostring(result))
@@ -731,7 +793,9 @@ local function buyHealingApple()
         }
     }
     local success, result = pcall(function()
-        return ReplicatedStorage:WaitForChild("API"):WaitForChild("ShopAPI/BuyItem"):InvokeServer(unpack(args))
+        local buyAPI = getAPI("BuyItem")
+        if not buyAPI then return false end
+        return buyAPI:InvokeServer(unpack(args))
     end)
     if success then
         debugPrint("Successfully purchased healing apple")
@@ -776,7 +840,9 @@ local function useHealingApple(foodID, petUniqueID)
         }
     }
     local equipSuccess, equipResult = pcall(function()
-        return ReplicatedStorage:WaitForChild("API"):WaitForChild("ToolAPI/Equip"):InvokeServer(unpack(equipArgs))
+        local equipAPI = getAPI("Equip")
+        if not equipAPI then return false end
+        return equipAPI:InvokeServer(unpack(equipArgs))
     end)
     if not equipSuccess then
         debugPrint("Failed to equip healing apple: " .. tostring(equipResult))
@@ -790,7 +856,9 @@ local function useHealingApple(foodID, petUniqueID)
         "START"
     }
     local startSuccess, startResult = pcall(function()
-        return ReplicatedStorage:WaitForChild("API"):WaitForChild("ToolAPI/ServerUseTool"):FireServer(unpack(startArgs))
+        local useAPI = getAPI("ServerUseTool")
+        if not useAPI then return false end
+        return useAPI:FireServer(unpack(startArgs))
     end)
     if not startSuccess then
         debugPrint("Failed to start using healing apple: " .. tostring(startResult))
@@ -809,7 +877,9 @@ local function useHealingApple(foodID, petUniqueID)
         }
     }
     local petObjectSuccess, petObjectResult = pcall(function()
-        return ReplicatedStorage:WaitForChild("API"):WaitForChild("PetObjectAPI/CreatePetObject"):InvokeServer(unpack(petObjectArgs))
+        local createAPI = getAPI("CreatePetObject")
+        if not createAPI then return false end
+        return createAPI:InvokeServer(unpack(petObjectArgs))
     end)
     if not petObjectSuccess then
         debugPrint("Failed to create pet object for healing: " .. tostring(petObjectResult))
@@ -860,7 +930,9 @@ local function safelyUnequipStroller()
         debugPrint("Unequipping stroller: " .. currentStrollerID)
         local args = { currentStrollerID }
         local success, result = pcall(function()
-            return ReplicatedStorage:WaitForChild("API"):WaitForChild("ToolAPI/Unequip"):InvokeServer(unpack(args))
+            local unequipAPI = getAPI("Unequip")
+            if not unequipAPI then return false end
+            return unequipAPI:InvokeServer(unpack(args))
         end)
         if success then
             debugPrint("Successfully unequipped stroller")
@@ -886,7 +958,9 @@ local function handleWalkAilment()
         true
     }
     local success, result = pcall(function()
-        return ReplicatedStorage:WaitForChild("API"):WaitForChild("HousingAPI/UnsubscribeFromHouse"):InvokeServer(unpack(args))
+        local unsubAPI = getAPI("UnsubscribeFromHouse")
+        if not unsubAPI then return false end
+        return unsubAPI:InvokeServer(unpack(args))
     end)
     if success then
         debugPrint("Successfully unsubscribed from house")
@@ -953,7 +1027,9 @@ local function handleRideAilment()
         true
     }
     local success, result = pcall(function()
-        return ReplicatedStorage:WaitForChild("API"):WaitForChild("HousingAPI/UnsubscribeFromHouse"):InvokeServer(unpack(args))
+        local unsubAPI = getAPI("UnsubscribeFromHouse")
+        if not unsubAPI then return false end
+        return unsubAPI:InvokeServer(unpack(args))
     end)
     if success then
         debugPrint("Successfully unsubscribed from house")
@@ -978,7 +1054,9 @@ local function handleRideAilment()
         }
     }
     local equipSuccess, equipResult = pcall(function()
-        return ReplicatedStorage:WaitForChild("API"):WaitForChild("ToolAPI/Equip"):InvokeServer(unpack(equipArgs))
+        local equipAPI = getAPI("Equip")
+        if not equipAPI then return false end
+        return equipAPI:InvokeServer(unpack(equipArgs))
     end)
     if not equipSuccess then
         debugPrint("Failed to equip stroller: " .. tostring(equipResult))
@@ -1144,7 +1222,9 @@ local function checkAndBuyMissingFurniture()
                 }
             }
             local success, result = pcall(function()
-                return ReplicatedStorage:WaitForChild("API"):WaitForChild("ShopAPI/BuyItem"):InvokeServer(unpack(args))
+                local buyAPI = getAPI("BuyItem")
+        if not buyAPI then return false end
+        return buyAPI:InvokeServer(unpack(args))
             end)
             if success then
                 debugPrint("Bought: " .. item.item)
@@ -1187,7 +1267,8 @@ local function useFurnitureWithPet(furnitureName)
         furnitureData.partName
     }
     local interactSuccess, interactResult = pcall(function()
-        ReplicatedStorage:WaitForChild("API"):WaitForChild("FurnitureAPI/InteractWithFurniture"):FireServer(unpack(interactArgs))
+        local furnAPI = getAPI("InteractWithFurniture")
+        if furnAPI then furnAPI:FireServer(unpack(interactArgs)) end
     end)
     if interactSuccess then
         debugPrint("Furniture interaction initiated")
@@ -1233,7 +1314,8 @@ local function purgeNonPriorityGarbage()
             if string.find(petName, pattern) then
                 debugPrint("PURGING garbage pet: " .. petData.id)
                 pcall(function()
-                    ReplicatedStorage.API["InventoryAPI/DeleteItem"]:FireServer(uniqueId)
+                    local deleteAPI = getAPI("DeleteItem")
+                    if deleteAPI then deleteAPI:FireServer(uniqueId) end
                 end)
                 task.wait(0.5)
                 break
@@ -1264,7 +1346,10 @@ local function performNeonFusion()
             debugPrint("Fusing 4x " .. petType .. " into NEON!")
             local petsToFuse = {pets[1], pets[2], pets[3], pets[4]}
             local fuseSuccess = pcall(function()
-                ReplicatedStorage.API["CombineAPI/CombinePets"]:InvokeServer(petsToFuse)
+                local combineAPI = getAPI("CombinePets")
+                if combineAPI then
+                    combineAPI:InvokeServer(petsToFuse)
+                end
             end)
             if fuseSuccess then
                 debugPrint("NEON FUSION SUCCESS: " .. petType)
@@ -1309,7 +1394,7 @@ local function addPriorityPets(snapshot)
     for _, pet in ipairs(available) do
         if pet.neon and added < slotsOpen then
             if not addedSet[pet.unique_id] then
-                pcall(function() ReplicatedStorage.API["IdleProgressionAPI/AddPet"]:FireServer(pet.unique_id) end)
+                pcall(function() local addPetAPI = getAPI("AddPet") if addPetAPI then addPetAPI:FireServer(pet.unique_id) end end)
                 debugPrint("Added NEON: " .. pet.name)
                 added += 1
                 addedSet[pet.unique_id] = true
@@ -1320,7 +1405,7 @@ local function addPriorityPets(snapshot)
     for _, eggName in ipairs(priorityEggs) do
         for _, pet in ipairs(available) do
             if pet.name == eggName and added < slotsOpen and not addedSet[pet.unique_id] then
-                pcall(function() ReplicatedStorage.API["IdleProgressionAPI/AddPet"]:FireServer(pet.unique_id) end)
+                pcall(function() local addPetAPI = getAPI("AddPet") if addPetAPI then addPetAPI:FireServer(pet.unique_id) end end)
                 debugPrint("Added PRIORITY: " .. pet.name)
                 added += 1
                 addedSet[pet.unique_id] = true
@@ -1331,14 +1416,17 @@ local function addPriorityPets(snapshot)
     while added < slotsOpen and AutoPetPenMode do
         debugPrint("Buying cracked_egg to fill slot...")
         local bought = pcall(function()
-            ReplicatedStorage.API["ShopAPI/BuyItem"]:InvokeServer("pets", "cracked_egg", {buy_count = 1})
+            local buyAPI = getAPI("BuyItem")
+            if buyAPI then
+                buyAPI:InvokeServer("pets", "cracked_egg", {buy_count = 1})
+            end
         end)
         if bought then
             task.wait(3)
             local newPets = getAvailablePets(getPetPenSnapshot())
             for _, pet in ipairs(newPets) do
                 if pet.name == "cracked_egg" and not addedSet[pet.unique_id] then
-                    pcall(function() ReplicatedStorage.API["IdleProgressionAPI/AddPet"]:FireServer(pet.unique_id) end)
+                    pcall(function() local addPetAPI = getAPI("AddPet") if addPetAPI then addPetAPI:FireServer(pet.unique_id) end end)
                     debugPrint("Added PURCHASED cracked_egg")
                     added += 1
                     addedSet[pet.unique_id] = true
@@ -1369,7 +1457,7 @@ local function startAutoPetPen()
         for _, pet in ipairs(snapshot) do
             if pet.age >= 6 then
                 debugPrint("Removing aged pet: " .. pet.name .. " (Age: " .. pet.age .. ")")
-                pcall(function() ReplicatedStorage.API["IdleProgressionAPI/RemovePet"]:FireServer(pet.unique_id) end)
+                pcall(function() local removePetAPI = getAPI("RemovePet") if removePetAPI then removePetAPI:FireServer(pet.unique_id) end end)
                 task.wait(0.7)
             end
         end
@@ -1380,7 +1468,7 @@ local function startAutoPetPen()
         addPriorityPets(snapshot)
      
         if os.time() - lastPetPenCommitTime >= 300 then
-            pcall(function() ReplicatedStorage.API["IdleProgressionAPI/CommitAllProgression"]:FireServer() end)
+            pcall(function() local commitAPI = getAPI("CommitAllProgression") if commitAPI then commitAPI:FireServer() end end)
             debugPrint("Committed PetPen rewards")
             lastPetPenCommitTime = os.time()
         end
@@ -1555,7 +1643,10 @@ local function startAilmentOnlyPetFarm()
     task.wait(3)
     local args = {true}
     pcall(function()
-        ReplicatedStorage:WaitForChild("API"):WaitForChild("HousingAPI/SetDoorLocked"):InvokeServer(unpack(args))
+        local doorAPI = getAPI("SetDoorLocked")
+        if doorAPI then
+            doorAPI:InvokeServer(unpack(args))
+        end
     end)
     debugPrint("Door locked, starting ailment monitoring with always-equipped...")
     monitorAndHandleAilments()
@@ -1564,7 +1655,10 @@ local function startAilmentOnlyPetFarm()
     safelyUnequipFood(currentFoodID)
     if petFarmPetID then
         pcall(function()
-            ReplicatedStorage.API["ToolAPI/Unequip"]:InvokeServer(petFarmPetID)
+            local unequipAPI = getAPI("Unequip")
+                if unequipAPI then
+                    unequipAPI:InvokeServer(petFarmPetID)
+                end
         end)
         petFarmPetID = nil
     end
@@ -1620,7 +1714,10 @@ local function togglePetFarmMode()
         safelyUnequipFood(currentFoodID)
         if petFarmPetID then
             pcall(function()
-                ReplicatedStorage.API["ToolAPI/Unequip"]:InvokeServer(petFarmPetID)
+                local unequipAPI = getAPI("Unequip")
+                if unequipAPI then
+                    unequipAPI:InvokeServer(petFarmPetID)
+                end
             end)
             petFarmPetID = nil
         end
